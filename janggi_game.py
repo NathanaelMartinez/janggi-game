@@ -1,4 +1,3 @@
-import pygame
 import sys
 import os
 from janggi_pieces import *
