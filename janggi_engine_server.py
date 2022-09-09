@@ -1,3 +1,4 @@
+import struct
 from socket import *
 from select import *
 import sys
@@ -5,7 +6,7 @@ import pickle
 import janggi_game
 
 # set constants
-HEADER_LENGTH = 10
+HEADER_LENGTH = 8
 ADDRESS = "localhost"
 PORT = 7777
 
@@ -27,33 +28,36 @@ sockets_list = [server_socket]
 def receive_message(client_socket):
     """This function receives messages from the client and returns False if an error occurs"""
     try:
-        message_header = client_socket.recv(HEADER_LENGTH)
+        header = client_socket.recv(HEADER_LENGTH)
 
-        if not len(message_header):
+        if not len(header):
             return False
 
         # get header to know how much to receive
-        message_length = int(message_header.decode().strip())
+        game_size = struct.unpack("!Q", header)[0]
 
-        return {'header': message_header, 'data': client_socket.recv(message_length)}
-
-    except Exception:
-        return False
+        return client_socket.recv(game_size)
 
 
-def send_reply(write_sockets):
+    except Exception as e:
+        print('Reading error: {}'.format(str(e)))
+        sys.exit()
+
+
+def send_reply(write_sockets, game):
     """This function sends a message to the client and returns False if an error occurs"""
     # iterate over read_sockets
     for socket in write_sockets:
         # get user input
-        message = input('> ')
+        move = input("Computer's Move: ")
 
         # If message is not empty - send it
-        if message:
-            # Encode message to bytes, prepare header and convert to bytes, then send
-            message = message.encode()
-            message_header = f"{len(message):<{HEADER_LENGTH}}".encode()
-            socket.send(message_header + message)
+        if move:
+            game.make_move(move)
+            # Encode game to bytes, prepare header and convert to bytes, then send
+            payload = pickle.dumps(game)
+            header = struct.pack('!Q', len(payload))
+            socket.send(header + payload)
 
 
 def main():
@@ -77,12 +81,11 @@ def main():
 
             # Else existing socket is sending a message
             else:
-                print("Waiting for first move...")
                 # When connected, the server calls recv to receive data
-                message = receive_message(socket)
+                game = receive_message(socket)
 
                 # If the reply is /q (there will be no message received, client exited), the server quits
-                if not message:
+                if not game:
                     print(f'Closed connection from: {sockets_list[1].getpeername()}')
 
                     # Remove from sockets_list for socket() at start of loop
@@ -95,12 +98,12 @@ def main():
                     # continue
 
                 # The server prints the data, then prompts for a reply
-                print(f'{message["data"].decode()}')
+                game = pickle.loads(game)
 
-
+                game.print_board()
                 # board = receive_message(socket)
                 # Otherwise, the server sends the reply
-                send_reply(write_sockets)
+                send_reply(write_sockets, game)
 
 
 if __name__ == "__main__":

@@ -68,10 +68,8 @@ class JanggiGame:
         """
 
         if self.get_check_state().upper() == color.upper():
-            print("game.is_in_check('" + color + "')  # returns True")
             return True
 
-        print("game.is_in_check('" + color + "')  # returns False")
         return False
 
     def check_check(self, color):
@@ -334,9 +332,6 @@ class JanggiGame:
         dest_column = destination[0]
         dest_row = destination[1]
 
-        print("game.make_move('" + str(alg_source) + "', '" + str(alg_destination) + "')")
-        print("game.print_board()")
-
         piece = self.get_piece_by_coordinate(source_column, source_row)
 
         if self.get_game_state() != "UNFINISHED":
@@ -369,6 +364,8 @@ class JanggiGame:
             if self.checkmate_check(self.get_turn()):
                 self.set_game_state(self.get_turn())
                 return False
+
+        self.print_board()
 
         return True
 
